@@ -1,5 +1,4 @@
-import { drawPathToTarget, runWithComponents, RoleContext } from "roles/components";
-import { ROLES } from "roles/constants";
+import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
 
 const builderAct = (context: RoleContext) => {
   const { creep } = context;
@@ -23,31 +22,12 @@ const builderAct = (context: RoleContext) => {
     return;
   }
 
-  // Build if a site exists; otherwise help upgrade
-  const site = creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
-  if (site) {
-    context.target = site;
-    const buildResult = creep.build(site);
-    if (buildResult === ERR_NOT_IN_RANGE) {
-      creep.moveTo(site);
-    }
-    return;
-  }
-
-  // If nothing to build, help upgrade the controller.
-  const controller = creep.room.controller;
-  if (controller) {
-    context.target = controller;
-    const upgradeResult = creep.upgradeController(controller);
-    if (upgradeResult === ERR_NOT_IN_RANGE) {
-      creep.moveTo(controller);
-    }
-  }
+  // In work mode with energy: delegate to fallback component (build or upgrade)
 };
 
 const roleBuilder = {
   run(creep: Creep) {
-    runWithComponents(creep, builderAct, [drawPathToTarget]);
+    runWithComponents(creep, builderAct, [fallbackBuildOrUpgrade, drawPathToTarget]);
   },
 };
 

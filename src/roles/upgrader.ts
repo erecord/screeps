@@ -1,4 +1,4 @@
-import { drawPathToTarget, runWithComponents, RoleContext } from "roles/components";
+import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
 
 const upgraderAct = (context: RoleContext) => {
   const { creep } = context;
@@ -35,7 +35,7 @@ const upgraderAct = (context: RoleContext) => {
 
 const roleUpgrader = {
   run(creep: Creep) {
-    runWithComponents(creep, upgraderAct, [drawPathToTarget]);
+    runWithComponents(creep, upgraderAct, [fallbackBuildOrUpgrade, drawPathToTarget]);
   },
 };
 
