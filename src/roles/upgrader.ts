@@ -10,6 +10,7 @@ const upgraderAct = (context: RoleContext) => {
   }
 
   if (creep.memory.working) {
+    // Harvest until full
     const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
     if (source) {
       context.target = source;
@@ -21,6 +22,7 @@ const upgraderAct = (context: RoleContext) => {
     return;
   }
 
+  // Spend energy upgrading the controller
   const controller = creep.room.controller;
   if (!controller) return;
 
