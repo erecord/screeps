@@ -29,17 +29,20 @@ export function planInitialStructures(spawn: StructureSpawn): BuildIntent[] {
   const needed = Math.max(allowedCount - (existingExtensions + pendingExtensions), 0);
   if (needed <= 0) return [];
 
-  // Try a growing ring search around the spawn for the first needed extension.
-  for (let range = 1; range <= 5; range++) {
-    for (let dx = -range; dx <= range; dx++) {
-      for (let dy = -range; dy <= range; dy++) {
+  const intents: BuildIntent[] = [];
+  // Try a growing ring search around the spawn for each needed extension.
+  for (let range = 1; range <= 7 && intents.length < needed; range++) {
+    for (let dx = -range; dx <= range && intents.length < needed; dx++) {
+      for (let dy = -range; dy <= range && intents.length < needed; dy++) {
         if (Math.abs(dx) !== range && Math.abs(dy) !== range) continue; // only outer ring
         const candidate = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName);
         if (!isPlaceable(candidate)) continue;
-        return [{ structureType: STRUCTURE_EXTENSION, pos: candidate }];
+        intents.push({ structureType: STRUCTURE_EXTENSION, pos: candidate });
       }
     }
   }
+
+  if (intents.length > 0) return intents;
 
   // Could not find a spot; surface a visual hint near the spawn.
   spawn.room.visual.text("No extension spot", spawn.pos.x, spawn.pos.y + 1, {
