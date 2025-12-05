@@ -1,18 +1,3 @@
-const radiusOffsets = [
-  [-1, -1],
-  [0, -1],
-  [1, -1],
-  [-1, 0],
-  /*spawn*/ [1, 0],
-  [-1, 1],
-  [0, 1],
-  [1, 1],
-  [-2, 0],
-  [2, 0],
-  [0, -2],
-  [0, 2],
-];
-
 export interface BuildIntent {
   structureType: BuildableStructureConstant;
   pos: RoomPosition;
