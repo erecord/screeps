@@ -1,34 +1,41 @@
 import { ROLES, RoleId } from "roles/constants";
 
-type BodyMap = Record<RoleId, BodyPartConstant[]>;
+type BodyTiers = Record<RoleId, BodyPartConstant[][]>;
 
-// Returns a body tuned to current room energy capacity.
+export function bodyCost(body: BodyPartConstant[]): number {
+  return body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
+}
+
+// Returns the best body we can afford right now, preferring larger tiers when energy allows.
 export function bodyForRole(spawn: StructureSpawn, role: RoleId): BodyPartConstant[] {
-  const capacity = spawn.room.energyCapacityAvailable;
+  const available = spawn.room.energyAvailable;
 
-  if (capacity >= 550) {
-    const bodies: BodyMap = {
-      [ROLES.HARVESTER]: [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], // 500
-      [ROLES.UPGRADER]: [WORK, WORK, WORK, CARRY, CARRY, MOVE], // 500
-      [ROLES.BUILDER]: [WORK, WORK, CARRY, CARRY, MOVE, MOVE], // 400
-    };
-    return bodies[role] ?? [WORK, CARRY, MOVE];
-  }
-
-  if (capacity >= 400) {
-    const bodies: BodyMap = {
-      [ROLES.HARVESTER]: [WORK, WORK, WORK, CARRY, MOVE], // 350
-      [ROLES.UPGRADER]: [WORK, WORK, CARRY, CARRY, MOVE], // 350
-      [ROLES.BUILDER]: [WORK, WORK, CARRY, CARRY, MOVE], // 350
-    };
-    return bodies[role] ?? [WORK, CARRY, MOVE];
-  }
-
-  const baseline: BodyMap = {
-    [ROLES.HARVESTER]: [WORK, WORK, CARRY, MOVE], // 250
-    [ROLES.UPGRADER]: [WORK, CARRY, CARRY, MOVE], // 200
-    [ROLES.BUILDER]: [WORK, CARRY, CARRY, MOVE], // 200
+  const tiers: BodyTiers = {
+    [ROLES.HARVESTER]: [
+      [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], // 500
+      [WORK, WORK, WORK, CARRY, MOVE], // 350
+      [WORK, WORK, CARRY, MOVE], // 250
+      [WORK, CARRY, MOVE], // 200
+    ],
+    [ROLES.UPGRADER]: [
+      [WORK, WORK, WORK, CARRY, CARRY, MOVE], // 500
+      [WORK, WORK, CARRY, CARRY, MOVE], // 350
+      [WORK, CARRY, CARRY, MOVE], // 200
+    ],
+    [ROLES.BUILDER]: [
+      [WORK, WORK, CARRY, CARRY, MOVE, MOVE], // 400
+      [WORK, WORK, CARRY, CARRY, MOVE], // 350
+      [WORK, CARRY, CARRY, MOVE], // 200
+    ],
   };
 
-  return baseline[role] ?? [WORK, CARRY, MOVE];
+  const roleTiers = tiers[role] ?? [[WORK, CARRY, MOVE]];
+  for (const body of roleTiers) {
+    if (bodyCost(body) <= available) {
+      return body;
+    }
+  }
+
+  // If nothing is affordable yet (e.g. room energy still refilling), return the smallest as a target.
+  return roleTiers[roleTiers.length - 1];
 }
