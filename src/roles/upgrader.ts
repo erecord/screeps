@@ -1,15 +1,21 @@
 import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
+import { ROLE_STATE } from "roles/constants";
+import { RoleStrategy } from "roles/types";
 
 const upgraderAct = (context: RoleContext) => {
   const { creep } = context;
 
-  if (creep.memory.working && creep.store.getFreeCapacity() === 0) {
-    creep.memory.working = false;
-  } else if (!creep.memory.working && creep.store.getUsedCapacity() === 0) {
-    creep.memory.working = true;
+  if (!creep.memory.state) {
+    creep.memory.state = creep.store.getUsedCapacity() > 0 ? ROLE_STATE.DELIVER : ROLE_STATE.GATHER;
+  }
+  if (creep.memory.state === ROLE_STATE.DELIVER && creep.store.getUsedCapacity() === 0) {
+    creep.memory.state = ROLE_STATE.GATHER;
+  }
+  if (creep.memory.state === ROLE_STATE.GATHER && creep.store.getFreeCapacity() === 0) {
+    creep.memory.state = ROLE_STATE.DELIVER;
   }
 
-  if (creep.memory.working) {
+  if (creep.memory.state === ROLE_STATE.GATHER) {
     // Harvest until full
     const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
     if (source) {
@@ -33,10 +39,9 @@ const upgraderAct = (context: RoleContext) => {
   }
 };
 
-const roleUpgrader = {
-  run(creep: Creep) {
-    runWithComponents(creep, upgraderAct, [fallbackBuildOrUpgrade, drawPathToTarget]);
-  },
+const roleUpgrader: RoleStrategy = {
+  act: upgraderAct,
+  components: [fallbackBuildOrUpgrade, drawPathToTarget],
 };
 
 export default roleUpgrader;

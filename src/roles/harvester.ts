@@ -1,15 +1,21 @@
 import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
+import { ROLE_STATE } from "roles/constants";
+import { RoleStrategy } from "roles/types";
 
 const harvesterAct = (context: RoleContext) => {
   const { creep } = context;
 
-  if (creep.memory.working && creep.store.getFreeCapacity() === 0) {
-    creep.memory.working = false;
-  } else if (!creep.memory.working && creep.store.getUsedCapacity() === 0) {
-    creep.memory.working = true;
+  if (!creep.memory.state) {
+    creep.memory.state = creep.store.getUsedCapacity() > 0 ? ROLE_STATE.DELIVER : ROLE_STATE.GATHER;
+  }
+  if (creep.memory.state === ROLE_STATE.DELIVER && creep.store.getUsedCapacity() === 0) {
+    creep.memory.state = ROLE_STATE.GATHER;
+  }
+  if (creep.memory.state === ROLE_STATE.GATHER && creep.store.getFreeCapacity() === 0) {
+    creep.memory.state = ROLE_STATE.DELIVER;
   }
 
-  if (creep.memory.working) {
+  if (creep.memory.state === ROLE_STATE.GATHER) {
     // Harvest until energy storage is full
     const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
     if (source) {
@@ -23,31 +29,26 @@ const harvesterAct = (context: RoleContext) => {
   }
 
   // When full: deposit to spawn if possible; otherwise let components handle fallback
-  if (creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
-    creep.memory.working = true;
-    return;
-  }
+  // Deliver to closest spawn/extension with free capacity
+  const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: structure =>
+      (structure.structureType === STRUCTURE_SPAWN ||
+        structure.structureType === STRUCTURE_EXTENSION) &&
+      structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+  }) as StructureExtension | StructureSpawn | null;
 
-  const spawnPreferred = Game.spawns["Spawn1"];
-  const spawnWithRoom =
-    (spawnPreferred && spawnPreferred.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-      ? spawnPreferred
-      : undefined) ??
-    _.find(Object.values(Game.spawns), s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-
-  if (spawnWithRoom) {
-    context.target = spawnWithRoom;
-    const transferResult = creep.transfer(spawnWithRoom, RESOURCE_ENERGY);
+  if (target) {
+    context.target = target;
+    const transferResult = creep.transfer(target, RESOURCE_ENERGY);
     if (transferResult === ERR_NOT_IN_RANGE) {
-      creep.moveTo(spawnWithRoom);
+      creep.moveTo(target);
     }
   }
 };
 
-const roleHarvester = {
-  run(creep: Creep) {
-    runWithComponents(creep, harvesterAct, [fallbackBuildOrUpgrade, drawPathToTarget]);
-  },
+const roleHarvester: RoleStrategy = {
+  act: harvesterAct,
+  components: [fallbackBuildOrUpgrade, drawPathToTarget],
 };
 
 export default roleHarvester;

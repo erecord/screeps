@@ -1,9 +1,22 @@
 const radiusOffsets = [
-  [-1, -1], [0, -1], [1, -1],
-  [-1, 0], /*spawn*/ [1, 0],
-  [-1, 1], [0, 1], [1, 1],
-  [-2, 0], [2, 0], [0, -2], [0, 2],
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  /*spawn*/ [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+  [-2, 0],
+  [2, 0],
+  [0, -2],
+  [0, 2],
 ];
+
+export interface BuildIntent {
+  structureType: BuildableStructureConstant;
+  pos: RoomPosition;
+}
 
 function isPlaceable(pos: RoomPosition): boolean {
   const terrain = Game.map.getRoomTerrain(pos.roomName);
@@ -16,9 +29,9 @@ function isPlaceable(pos: RoomPosition): boolean {
   return true;
 }
 
-export function planInitialStructures(spawn: StructureSpawn) {
+export function planInitialStructures(spawn: StructureSpawn): BuildIntent[] {
   const controller = spawn.room.controller;
-  if (!controller || controller.level < 2) return;
+  if (!controller || controller.level < 2) return [];
 
   const existingExtensions = spawn.room.find(FIND_MY_STRUCTURES, {
     filter: s => s.structureType === STRUCTURE_EXTENSION,
@@ -27,23 +40,27 @@ export function planInitialStructures(spawn: StructureSpawn) {
     filter: site => site.structureType === STRUCTURE_EXTENSION,
   }).length;
 
-  if (existingExtensions + pendingExtensions >= 1) return;
+  const allowedCount = CONTROLLER_STRUCTURES.extension?.[controller.level] ?? 0;
+  const needed = Math.max(allowedCount - (existingExtensions + pendingExtensions), 0);
+  if (needed <= 0) return [];
 
-  for (const [dx, dy] of radiusOffsets) {
-    const candidate = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName);
-    if (!isPlaceable(candidate)) continue;
-    const result = spawn.room.createConstructionSite(candidate, STRUCTURE_EXTENSION);
-    if (result === OK) {
-      console.log(`Planned extension at ${candidate.x},${candidate.y}`);
-      spawn.room.visual.text("Extension planned", candidate.x, candidate.y, {
-        color: "yellow",
-        font: 0.5,
-        opacity: 0.8,
-      });
-      Game.notify(`Planned extension at ${spawn.room.name} (${candidate.x},${candidate.y})`);
+  // Try a growing ring search around the spawn for the first needed extension.
+  for (let range = 1; range <= 5; range++) {
+    for (let dx = -range; dx <= range; dx++) {
+      for (let dy = -range; dy <= range; dy++) {
+        if (Math.abs(dx) !== range && Math.abs(dy) !== range) continue; // only outer ring
+        const candidate = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName);
+        if (!isPlaceable(candidate)) continue;
+        return [{ structureType: STRUCTURE_EXTENSION, pos: candidate }];
+      }
     }
-    return;
   }
 
-  console.log("planInitialStructures() 🟢");
+  // Could not find a spot; surface a visual hint near the spawn.
+  spawn.room.visual.text("No extension spot", spawn.pos.x, spawn.pos.y + 1, {
+    color: "red",
+    font: 0.6,
+    opacity: 0.8,
+  });
+  return [];
 }

@@ -19,7 +19,7 @@ declare global {
   interface CreepMemory {
     role: string;
     room: string;
-    working: boolean;
+    state?: "gather" | "deliver";
   }
 
 }
@@ -32,11 +32,4 @@ declare const global: {
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   gameManager.run();
-
-  // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
-    }
-  }
 });

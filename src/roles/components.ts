@@ -7,6 +7,10 @@ export interface RoleContext {
 
 export type RoleComponent = (context: RoleContext) => void;
 
+export function composeComponents(...components: RoleComponent[]): RoleComponent {
+  return context => components.forEach(component => component(context));
+}
+
 export function runWithComponents(
   creep: Creep,
   act: (context: RoleContext) => void,

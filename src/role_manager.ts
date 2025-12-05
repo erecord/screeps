@@ -1,15 +1,10 @@
-import roleHarvester from "roles/harvester";
-import roleUpgrader from "roles/upgrader";
-import roleBuilder from "roles/builder";
+import { ROLE_BODIES, ROLE_PRIORITY } from "config";
 import { ROLES, RoleId } from "roles/constants";
 import { desiredRoleCountsForSpawn } from "spawn_policy";
-console.log("test.ts imported");
-
-const roleStrategies: Partial<Record<RoleId, { run(creep: Creep): void }>> = {
-  [ROLES.HARVESTER]: roleHarvester,
-  [ROLES.UPGRADER]: roleUpgrader,
-  [ROLES.BUILDER]: roleBuilder,
-};
+import { roleRegistry } from "roles/registry";
+import { RoleStrategy } from "roles/types";
+import { runWithComponents } from "roles/components";
+import logger from "utils/logger";
 
 function ensureMinimumCreeps(
   spawn: StructureSpawn,
@@ -18,26 +13,24 @@ function ensureMinimumCreeps(
 ) {
   if (!spawn) return;
 
-  const queueSpawn = (body: BodyPartConstant[], role: RoleId, working: boolean) => {
+  const queueSpawn = (role: RoleId) => {
     const currentCount = roleCounts[role] ?? 0;
     const newName = `${role}${currentCount + 1}`;
+    const body = ROLE_BODIES[role] ?? [WORK, CARRY, MOVE];
     spawn.spawnCreep(body, newName, {
       memory: {
         role,
         room: spawn.room.name,
-        working,
       },
     });
     roleCounts[role] = currentCount + 1;
   };
 
-  const rolesInPriority: RoleId[] = [ROLES.HARVESTER, ROLES.UPGRADER, ROLES.BUILDER];
-
-  for (const role of rolesInPriority) {
+  for (const role of ROLE_PRIORITY) {
     const desired = desiredCounts[role] ?? 0;
     const current = roleCounts[role] ?? 0;
     if (current < desired) {
-      queueSpawn([MOVE, WORK, CARRY], role, false);
+      queueSpawn(role);
       return;
     }
   }
@@ -45,8 +38,12 @@ function ensureMinimumCreeps(
 
 function runRole(creep: Creep) {
   const roleId = creep.memory.role as RoleId;
-  const roleHandler = roleStrategies[roleId];
-  if (roleHandler) roleHandler.run(creep);
+  const strategy = roleRegistry[roleId] as RoleStrategy | undefined;
+  if (strategy) {
+    runWithComponents(creep, strategy.act, strategy.components);
+  } else {
+    logger.warn(`No strategy for role ${roleId}`);
+  }
 }
 
 const roleManager = {
