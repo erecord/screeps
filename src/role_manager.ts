@@ -51,7 +51,6 @@ function runRole(creep: Creep) {
 
 const roleManager = {
   run() {
-    console.log("RoleManager.run() 🟡")
     const spawn = Game.spawns["Spawn1"] ?? Object.values(Game.spawns)[0];
     if (!spawn) return;
 
@@ -61,7 +60,7 @@ const roleManager = {
     ensureMinimumCreeps(spawn, roleCounts, desiredCounts);
     _.forEach(Game.creeps, runRole);
 
-    console.log("RoleManager.run() 🟢")
+    console.log("RoleManager.run() 🟢");
   },
 };
 
