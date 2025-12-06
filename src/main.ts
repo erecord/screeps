@@ -17,6 +17,13 @@ declare global {
     spawns: { [name: string]: SpawnMemory };
     debug: {
       drawPaths: boolean;
+      ticksPerSecond?: number;
+      tickRate?: {
+        lastGameTime: number;
+        lastRealTime: number;
+        ticksPerSecond: number;
+      };
+      showNameTags?: boolean;
     };
   }
 

@@ -1,6 +1,7 @@
 import roleManager from "role_manager";
 import { monitorSpawn } from "core/spawn_control";
 import { planStructures } from "spawn/structures";
+import { updateTickRate } from "utils/tick_rate";
 
 const gameManager = {
   run() {
@@ -18,7 +19,7 @@ const gameManager = {
     }
 
     roleManager.run();
-
+    updateTickRate();
   },
 };
 
