@@ -1,7 +1,7 @@
 import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
-import { updateRoleState } from "roles/state";
+import { updateRoleState } from "roles/role_state";
 
 const upgraderAct = (context: RoleContext) => {
   const { creep } = context;

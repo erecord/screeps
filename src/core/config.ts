@@ -1,3 +1,4 @@
 import { ROLES, RoleId } from "roles/constants";
 
-export const ROLE_PRIORITY: RoleId[] = [ROLES.HARVESTER, ROLES.UPGRADER, ROLES.BUILDER];
+// Order matters: fill harvesters, then ensure a builder exists, then upgraders.
+export const ROLE_PRIORITY: RoleId[] = [ROLES.HARVESTER, ROLES.BUILDER, ROLES.UPGRADER];

@@ -21,14 +21,6 @@ export function desiredRoleCountsForSpawn(
     };
   }
 
-  if (capacity >= 400) {
-    return {
-      [ROLES.HARVESTER]: 2,
-      [ROLES.UPGRADER]: 2,
-      [ROLES.BUILDER]: 1,
-    };
-  }
-
   if (capacity >= 300) {
     return {
       [ROLES.HARVESTER]: 2,

@@ -14,6 +14,7 @@ declare global {
   interface Memory {
     uuid: number;
     log: any;
+    spawns: { [name: string]: SpawnMemory };
   }
 
   interface CreepMemory {
