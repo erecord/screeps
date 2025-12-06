@@ -29,16 +29,44 @@ export function planInitialStructures(spawn: StructureSpawn): BuildIntent[] {
   const needed = Math.max(allowedCount - (existingExtensions + pendingExtensions), 0);
   if (needed <= 0) return [];
 
+  // Keep a clear moat around spawn (no extensions adjacent).
+  const moat = 2;
+
+  // Choose a farm direction away from controller (if present), otherwise east.
+  const directions: Array<{ dx: number; dy: number }> = [
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 },
+  ];
+  let farmDir = directions[0];
+  if (controller) {
+    const vx = spawn.pos.x - controller.pos.x;
+    const vy = spawn.pos.y - controller.pos.y;
+    farmDir =
+      Math.abs(vx) >= Math.abs(vy)
+        ? vx >= 0
+          ? { dx: 1, dy: 0 }
+          : { dx: -1, dy: 0 }
+        : vy >= 0
+        ? { dx: 0, dy: 1 }
+        : { dx: 0, dy: -1 };
+  }
+
   const intents: BuildIntent[] = [];
-  // Try a growing ring search around the spawn for each needed extension.
-  for (let range = 1; range <= 7 && intents.length < needed; range++) {
-    for (let dx = -range; dx <= range && intents.length < needed; dx++) {
-      for (let dy = -range; dy <= range && intents.length < needed; dy++) {
-        if (Math.abs(dx) !== range && Math.abs(dy) !== range) continue; // only outer ring
-        const candidate = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName);
-        if (!isPlaceable(candidate)) continue;
-        intents.push({ structureType: STRUCTURE_EXTENSION, pos: candidate });
-      }
+  // Build a 3xN strip starting moat tiles away in the farm direction.
+  const startX = spawn.pos.x + farmDir.dx * moat;
+  const startY = spawn.pos.y + farmDir.dy * moat;
+
+  for (let offset = 0; offset < needed * 2 && intents.length < needed; offset++) {
+    for (let lateral = -1; lateral <= 1 && intents.length < needed; lateral++) {
+      const x = startX + farmDir.dx * offset + (farmDir.dy !== 0 ? lateral : 0);
+      const y = startY + farmDir.dy * offset + (farmDir.dx !== 0 ? lateral : 0);
+      const candidate = new RoomPosition(x, y, spawn.pos.roomName);
+      const dist = Math.abs(candidate.x - spawn.pos.x) + Math.abs(candidate.y - spawn.pos.y);
+      if (dist < moat) continue;
+      if (!isPlaceable(candidate)) continue;
+      intents.push({ structureType: STRUCTURE_EXTENSION, pos: candidate });
     }
   }
 
