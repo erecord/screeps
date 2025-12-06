@@ -81,7 +81,7 @@ export const deliverToSpawnAndExtensions: RoleComponent = context => {
   const { creep } = context;
   if (!shouldDeliver(creep) || creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
 
-  const deliveryThreshold = getDeliveryThreshold(creep);
+  const deliveryThreshold = getPhaseAwareDeliveryThreshold(creep);
   if (creep.room.energyAvailable >= deliveryThreshold && deliveryThreshold > 0) return;
 
   const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -111,13 +111,27 @@ function shouldDeliver(creep: Creep): boolean {
   return creep.memory.state === "deliver";
 }
 
-function getDeliveryThreshold(creep: Creep): number {
-  return (
-    creep.memory.energyDeliveryThreshold ??
-    (creep.room.energyCapacityAvailable > 0
-      ? Math.floor(creep.room.energyCapacityAvailable * 0.5)
-      : 0)
-  );
+/**
+ * Decide when to divert to refilling spawn/extensions.
+ * - Uses a fixed minimum to keep bootstrapping healthy.
+ * - Uses a fraction of capacity for higher RCLs.
+ * - Respects a per-creep override if set.
+ */
+function getPhaseAwareDeliveryThreshold(creep: Creep): number {
+  if (creep.memory.energyDeliveryThreshold !== undefined) {
+    return creep.memory.energyDeliveryThreshold;
+  }
+
+  const capacity = creep.room.energyCapacityAvailable;
+  const controllerLevel = creep.room.controller?.level ?? 0;
+
+  // Early game: refill aggressively
+  if (controllerLevel <= 2) {
+    return Math.max(200, Math.floor(capacity * 0.25));
+  }
+
+  // Mid/late game: be less intrusive but still keep refills flowing
+  return Math.max(300, Math.floor(capacity * 0.35));
 }
 
 // Fallback: if a role did not pick a target, try to build first, then upgrade.

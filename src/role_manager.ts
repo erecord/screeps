@@ -6,6 +6,8 @@ import { roleRegistry } from "roles/role_registry";
 import { RoleStrategy } from "roles/types";
 import { runWithComponents } from "roles/components";
 import { isDefenseMode } from "defense/defense_manager";
+import { buildRoomSnapshot } from "planner/planner_snapshot";
+import { DEFAULT_PHASES, selectPhase } from "planner/planner_phases";
 import logger from "utils/logger";
 
 function computeRoleCounts(spawn: StructureSpawn): Partial<Record<RoleId, number>> {
@@ -67,7 +69,16 @@ const roleManager = {
     if (!spawn) return;
 
     const roleCounts = computeRoleCounts(spawn);
-    const desiredCounts = desiredRolesWithContext(spawn);
+
+    // Phase-aware role targets merged with contextual adjustments.
+    const snapshot = buildRoomSnapshot(spawn.room);
+    const phase = selectPhase(DEFAULT_PHASES, snapshot);
+    const contextual = desiredRolesWithContext(spawn);
+    const desiredCounts = { ...phase.roleTargets };
+    Object.entries(contextual).forEach(([role, count]) => {
+      const id = role as RoleId;
+      desiredCounts[id] = Math.max(desiredCounts[id] ?? 0, count ?? 0);
+    });
 
     ensureMinimumCreeps(spawn, roleCounts, desiredCounts);
     _.forEach(Game.creeps, runRole);

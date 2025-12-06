@@ -24,6 +24,14 @@ declare global {
         lastPlanned: number;
       }
     >;
+    structurePlans?: Record<
+      string,
+      {
+        structures: Partial<
+          Record<BuildableStructureConstant, Array<{ x: number; y: number; roomName: string }>>
+        >;
+      }
+    >;
     debug: {
       drawPaths: boolean;
       ticksPerSecond?: number;

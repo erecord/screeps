@@ -44,7 +44,7 @@ function recomputePlan(room: Room, spawn: StructureSpawn): RoadPlan {
 }
 
 function syncRoads(plan: RoadPlan, room: Room) {
-  let planDirty = false;
+  let planModifiedAndNeedsSave = false;
   let placed = 0;
   const positions: RoomPosition[] = [];
   plan.roundabout.forEach(pos => positions.push(storedToPos(pos)));
@@ -67,6 +67,11 @@ function syncRoads(plan: RoadPlan, room: Room) {
       remainingKeys.add(posKey(pos));
       continue;
     }
+    // If occupied by a non-road structure, drop this planned road.
+    if (look.some(s => s.structureType !== STRUCTURE_ROAD)) {
+      planModifiedAndNeedsSave = true;
+      continue;
+    }
     const result = room.createConstructionSite(pos, STRUCTURE_ROAD);
     if (result === OK) placed++;
     else remainingKeys.add(posKey(pos));
@@ -77,7 +82,7 @@ function syncRoads(plan: RoadPlan, room: Room) {
     remainingKeys.has(posKey(storedToPos(pos)))
   );
   if (filteredRoundabout.length !== plan.roundabout.length) {
-    planDirty = true;
+    planModifiedAndNeedsSave = true;
     plan.roundabout = filteredRoundabout;
   }
 
@@ -87,12 +92,12 @@ function syncRoads(plan: RoadPlan, room: Room) {
     if (remaining.length > 0) {
       filteredRoutes[id] = remaining;
     } else {
-      planDirty = true;
+      planModifiedAndNeedsSave = true;
     }
   });
   plan.routes = filteredRoutes;
 
-  if (planDirty) {
+  if (planModifiedAndNeedsSave) {
     saveRoadPlan(room, plan);
   }
 }

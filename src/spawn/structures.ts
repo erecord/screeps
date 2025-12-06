@@ -1,6 +1,9 @@
 import { planInitialStructures } from "policy/build_planner";
 import logger from "utils/logger";
 import { planRoads } from "roads/planner";
+import { buildRoomSnapshot } from "planner/planner_snapshot";
+import { DEFAULT_PHASES, selectPhase } from "planner/planner_phases";
+import { placePhaseStructures } from "planner/planner_placement";
 
 export function planStructures(spawn: StructureSpawn) {
   // Place planned structures (currently extensions) while leaving the spawn loop clean.
@@ -20,4 +23,9 @@ export function planStructures(spawn: StructureSpawn) {
   });
 
   planRoads(spawn.room);
+
+  const snapshot = buildRoomSnapshot(spawn.room);
+  const phase = selectPhase(DEFAULT_PHASES, snapshot);
+  // Use phase structure targets with validator chain; roads already prioritised separately.
+  placePhaseStructures(spawn, snapshot, phase);
 }

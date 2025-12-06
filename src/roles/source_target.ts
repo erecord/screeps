@@ -8,11 +8,33 @@ export function getOrAssignSource(creep: Creep): Source | null {
     creep.memory.harvestTargetId = undefined;
   }
 
-  const closestActiveSource = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-  if (closestActiveSource) {
-    creep.memory.harvestTargetId = closestActiveSource.id;
-    return closestActiveSource;
-  }
+  const sources = creep.room.find(FIND_SOURCES_ACTIVE);
+  if (!sources.length) return null;
 
-  return null;
+  const counts = countAssignments(creep.room);
+  const selected =
+    _.reduce(
+      sources,
+      (best, src) => {
+        if (!best) return src;
+        const bestCount = counts[best.id] ?? 0;
+        const thisCount = counts[src.id] ?? 0;
+        return thisCount < bestCount ? src : best;
+      },
+      null as Source | null
+    ) ?? sources[0];
+
+  creep.memory.harvestTargetId = selected.id;
+  return selected;
+}
+
+function countAssignments(room: Room): Record<Id<Source>, number> {
+  const counts: Record<Id<Source>, number> = {};
+  _.forEach(Game.creeps, c => {
+    if (c.room.name !== room.name) return;
+    const id = c.memory.harvestTargetId as Id<Source> | undefined;
+    if (!id) return;
+    counts[id] = (counts[id] ?? 0) + 1;
+  });
+  return counts;
 }

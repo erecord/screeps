@@ -12,7 +12,7 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 3,
       [ROLES.UPGRADER]: 2,
       [ROLES.BUILDER]: 2,
-      [ROLES.DEFENDER]: 1,
+      [ROLES.DEFENDER]: spawn.room.controller && spawn.room.controller.level >= 2 ? 1 : 0,
     };
   }
 
@@ -21,7 +21,7 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 2,
       [ROLES.UPGRADER]: 2,
       [ROLES.BUILDER]: 1,
-      [ROLES.DEFENDER]: 1,
+      [ROLES.DEFENDER]: spawn.room.controller && spawn.room.controller.level >= 2 ? 1 : 0,
     };
   }
 
@@ -30,14 +30,14 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 2,
       [ROLES.UPGRADER]: 1,
       [ROLES.BUILDER]: 1,
-      [ROLES.DEFENDER]: 1,
+      [ROLES.DEFENDER]: 0,
     };
   }
 
   return {
     [ROLES.HARVESTER]: 1,
     [ROLES.UPGRADER]: 1,
-    [ROLES.DEFENDER]: 1,
+    [ROLES.DEFENDER]: 0,
   };
 }
 

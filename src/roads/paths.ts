@@ -2,12 +2,32 @@ import { posToStored } from "roads/state";
 
 export function planRoundabout(spawn: StructureSpawn): RoomPosition[] {
   const positions: RoomPosition[] = [];
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      if (dx === 0 && dy === 0) continue;
-      positions.push(new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName));
-    }
-  }
+  const offsets = [
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+    [-1, 0],
+    [1, 0],
+    [-1, 1],
+    [0, 1],
+    [1, 1],
+  ];
+
+  offsets.forEach(([dx, dy]) =>
+    positions.push(new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName))
+  );
+
+  // Add two-lane exits to reduce spawn blocking.
+  const exitOffsets = [
+    [2, 0],
+    [-2, 0],
+    [0, 2],
+    [0, -2],
+  ];
+  exitOffsets.forEach(([dx, dy]) =>
+    positions.push(new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName))
+  );
+
   return positions;
 }
 

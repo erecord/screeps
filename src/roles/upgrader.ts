@@ -21,7 +21,11 @@ const upgraderAct = (context: RoleContext) => {
       context.target = source;
       const harvestResult = creep.harvest(source);
       if (harvestResult === ERR_NOT_IN_RANGE) {
-        creep.moveTo(source);
+        const moveResult = creep.moveTo(source);
+        if (moveResult === ERR_NO_PATH) {
+          // Clear unreachable target so we can reassign.
+          creep.memory.harvestTargetId = undefined;
+        }
       }
     }
     return;

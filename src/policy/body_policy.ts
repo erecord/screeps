@@ -38,6 +38,15 @@ export interface BodyPlan {
   minimum: BodyPartConstant[];
 }
 
+// Chance to spawn an armoured variant per role (swaps WORK for ATTACK/TOUGH at higher RCL)
+const ARMOURED_RATIOS: Partial<Record<RoleId, number>> = {
+  [ROLES.HARVESTER]: 0.1,
+  [ROLES.UPGRADER]: 0.1,
+  [ROLES.BUILDER]: 0.1,
+  // Defenders already attack-focused
+};
+const ARMOURED_MIN_RCL = 4; // Only apply armoured variants at or above this RCL
+
 // Decide a target body based on energy capacity, and a minimum fallback to avoid deadlocks.
 export function bodyPlanForRole(spawn: StructureSpawn, role: RoleId): BodyPlan {
   const capacity = spawn.room.energyCapacityAvailable;
@@ -53,5 +62,33 @@ export function bodyPlanForRole(spawn: StructureSpawn, role: RoleId): BodyPlan {
   }
 
   const minimum = tiers[tiers.length - 1];
-  return { target, minimum };
+
+  const maybeArmoured = maybeApplyArmouredVariant(target, role, capacity, spawn.room.controller?.level ?? 0);
+
+  return { target: maybeArmoured, minimum };
+}
+
+function maybeApplyArmouredVariant(
+  body: BodyPartConstant[],
+  role: RoleId,
+  capacity: number,
+  controllerLevel: number
+): BodyPartConstant[] {
+  if (capacity < 550) return body;
+  if (role === ROLES.DEFENDER) return body;
+  if (controllerLevel < ARMOURED_MIN_RCL) return body;
+  const ratio = ARMOURED_RATIOS[role] ?? 0;
+  if (Math.random() > ratio) return body;
+
+  const variant = [...body];
+  const workIndex = variant.lastIndexOf(WORK);
+  if (workIndex !== -1) {
+    variant[workIndex] = ATTACK;
+  }
+  // Optionally add a tough by replacing a CARRY if present
+  const carryIndex = variant.lastIndexOf(CARRY);
+  if (carryIndex !== -1 && Math.random() > 0.5) {
+    variant[carryIndex] = TOUGH;
+  }
+  return variant;
 }
