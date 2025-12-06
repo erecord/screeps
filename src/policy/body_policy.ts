@@ -25,6 +25,12 @@ const TIERS: BodyTiers = {
     [WORK, WORK, CARRY, CARRY, MOVE], // 350
     [WORK, CARRY, CARRY, MOVE], // 200
   ],
+  [ROLES.DEFENDER]: [
+    [TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK], // 260
+    [MOVE, MOVE, ATTACK, ATTACK], // 260 alternative if tough not desired
+    [MOVE, MOVE, ATTACK], // 190
+    [MOVE, ATTACK], // 130
+  ],
 };
 
 export interface BodyPlan {

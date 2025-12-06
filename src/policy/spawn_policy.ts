@@ -1,4 +1,5 @@
 import { ROLES, RoleId } from "roles/constants";
+import { adjustDesiredForDefense } from "defense/defense_manager";
 
 export function desiredRoleCountsForSpawn(
   spawn: StructureSpawn
@@ -10,6 +11,7 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 3,
       [ROLES.UPGRADER]: 2,
       [ROLES.BUILDER]: 2,
+      [ROLES.DEFENDER]: 1,
     };
   }
 
@@ -18,6 +20,7 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 2,
       [ROLES.UPGRADER]: 2,
       [ROLES.BUILDER]: 1,
+      [ROLES.DEFENDER]: 1,
     };
   }
 
@@ -26,12 +29,14 @@ export function desiredRoleCountsForSpawn(
       [ROLES.HARVESTER]: 2,
       [ROLES.UPGRADER]: 1,
       [ROLES.BUILDER]: 1,
+      [ROLES.DEFENDER]: 1,
     };
   }
 
   return {
     [ROLES.HARVESTER]: 1,
     [ROLES.UPGRADER]: 1,
+    [ROLES.DEFENDER]: 1,
   };
 }
 
@@ -39,7 +44,8 @@ export function desiredRolesWithContext(
   spawn: StructureSpawn
 ): Partial<Record<RoleId, number>> {
   const base = desiredRoleCountsForSpawn(spawn);
-  return adjustForConstruction(spawn, base);
+  const withConstruction = adjustForConstruction(spawn, base);
+  return adjustDesiredForDefense(withConstruction, spawn.room);
 }
 
 function adjustForConstruction(
