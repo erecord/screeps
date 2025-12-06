@@ -43,6 +43,7 @@ declare global {
       };
       showNameTags?: boolean;
       lastStatsLog?: number;
+      lastPhaseLog?: number;
     };
   }
 

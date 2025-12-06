@@ -25,6 +25,10 @@ function nextRoleId(role: RoleId): string {
 function clearWaiting(spawnMem: any) {
   spawnMem.waitingSince = undefined;
   spawnMem.waitingForBody = undefined;
+  spawnMem.waitingPeakEnergy = undefined;
+  if (spawnMem.waitLog) {
+    spawnMem.waitLog = {};
+  }
 }
 
 function spawnEmergency(
@@ -123,16 +127,27 @@ export function trySpawnCreep(
   spawnMem.waitingForBody = plan.target;
   const waited = Game.time - (spawnMem.waitingSince as number);
   const ratio = targetCost / Math.max(minCost, 1);
-  const fallbackWait = Math.min(200, Math.max(50, Math.floor(ratio * 25)));
+  // Be more lenient before falling back to a smaller body so we don't downgrade too eagerly.
+  const fallbackWait = Math.min(300, Math.max(80, Math.floor(ratio * 40)));
+  const WAIT_LOG_COOLDOWN = 5;
 
-  if (energyAvailable >= minCost && waited >= fallbackWait) {
+  // Track the peak energy seen during this wait; only fallback if we never get close to target.
+  spawnMem.waitingPeakEnergy = Math.max(spawnMem.waitingPeakEnergy ?? 0, energyAvailable);
+  const nearTarget = spawnMem.waitingPeakEnergy >= targetCost * 0.8;
+
+  if (energyAvailable >= minCost && waited >= fallbackWait && !nearTarget) {
     return spawnFallback(spawn, role, spawnMem, plan, waited);
   }
 
-  logger.info(
-    `Waiting to accumulate energy for ${role}; target ${targetCost}, have ${energyAvailable}, waited ${waited} ticks (~${formatTickAgo(
-      Game.time - waited
-    )})`
-  );
+  spawnMem.waitLog = spawnMem.waitLog ?? {};
+  const lastLog = spawnMem.waitLog[role] ?? 0;
+  if (Game.time - lastLog >= WAIT_LOG_COOLDOWN) {
+    logger.info(
+      `Waiting to accumulate energy for ${role}; target ${targetCost}, have ${energyAvailable}, waited ${waited} ticks (~${formatTickAgo(
+        Game.time - waited
+      )})`
+    );
+    spawnMem.waitLog[role] = Game.time;
+  }
   return false;
 }
