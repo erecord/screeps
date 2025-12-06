@@ -22,6 +22,7 @@ export function runWithComponents(
 }
 
 export const drawPathToTarget: RoleComponent = ({ creep, target }) => {
+  if (!Memory.debug?.drawPaths) return;
   if (!target) return;
   const targetPos = target instanceof RoomPosition ? target : target.pos;
   creep.room.visual.line(creep.pos, targetPos, { color: "yellow", opacity: 0.3 });
