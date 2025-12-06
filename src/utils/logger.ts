@@ -4,7 +4,6 @@ const logger = {
   },
   warn(message: string) {
     console.log(`WARN: ${message}`);
-    Game.notify(`WARN: ${message}`);
   },
   notify(message: string) {
     Game.notify(message);
