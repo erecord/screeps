@@ -15,6 +15,7 @@ declare global {
     uuid: number;
     log: any;
     spawns: { [name: string]: SpawnMemory };
+    defendMode?: boolean;
     roads?: Record<
       string,
       {

@@ -5,6 +5,7 @@ import { trySpawnCreep } from "spawn/boot";
 import { roleRegistry } from "roles/role_registry";
 import { RoleStrategy } from "roles/types";
 import { runWithComponents } from "roles/components";
+import { isDefenseMode } from "defense/defense_manager";
 import logger from "utils/logger";
 
 function computeRoleCounts(spawn: StructureSpawn): Partial<Record<RoleId, number>> {
@@ -28,7 +29,9 @@ function ensureMinimumCreeps(
   if (!Memory.spawns[spawn.name]) Memory.spawns[spawn.name] = {};
   const spawnMem = Memory.spawns[spawn.name] as any;
 
-  for (const role of ROLE_PRIORITY) {
+  const priority = getRolePriority(spawn.room);
+
+  for (const role of priority) {
     const desired = desiredCounts[role] ?? 0;
     const current = roleCounts[role] ?? 0;
     if (current < desired) {
@@ -38,6 +41,14 @@ function ensureMinimumCreeps(
       return;
     }
   }
+}
+
+function getRolePriority(room: Room): RoleId[] {
+  if (isDefenseMode(room)) {
+    // Defenders first during active defense, then keep economy flowing
+    return [ROLES.DEFENDER, ROLES.HARVESTER, ROLES.BUILDER, ROLES.UPGRADER];
+  }
+  return ROLE_PRIORITY;
 }
 
 function runRole(creep: Creep) {
