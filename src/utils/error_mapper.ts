@@ -4,13 +4,20 @@ import { SourceMapConsumer } from "source-map";
 export class ErrorMapper {
   // Cache consumer
   private static _consumer?: SourceMapConsumer;
+  private static _loadFailed = false;
 
   public static get consumer(): SourceMapConsumer {
-    if (this._consumer == null) {
-      this._consumer = new SourceMapConsumer(require("main.js.map"));
+    if (this._consumer == null && !this._loadFailed) {
+      try {
+        this._consumer = new SourceMapConsumer(require("main.js.map"));
+      } catch (err) {
+        this._loadFailed = true;
+        console.log(`Source map load failed, falling back to raw stacks: ${err}`);
+      }
     }
 
-    return this._consumer;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this._consumer!;
   }
 
   // Cache previously mapped traces to improve performance
@@ -29,6 +36,10 @@ export class ErrorMapper {
     const stack: string = error instanceof Error ? (error.stack as string) : error;
     if (Object.prototype.hasOwnProperty.call(this.cache, stack)) {
       return this.cache[stack];
+    }
+
+    if (this._loadFailed) {
+      return stack;
     }
 
     // eslint-disable-next-line no-useless-escape
