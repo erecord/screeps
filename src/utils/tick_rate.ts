@@ -1,26 +1,31 @@
 /**
  * Track ticks per second by comparing Game.time to real time.
- * Stores the latest estimate in Memory.debug.ticksPerSecond and tickRate.
+ * Stores the latest estimate in Memory.debug.tickRate and returns it.
  */
 const DEFAULT_TPS = 1.0;
+const SMOOTHING = 0.3;
+
+interface TickRateMemory {
+  lastGameTime: number;
+  lastRealTime: number;
+  ticksPerSecond: number;
+}
+
+function initTickRate(): TickRateMemory {
+  return {
+    lastGameTime: Game.time,
+    lastRealTime: Date.now(),
+    ticksPerSecond: Memory.debug?.ticksPerSecond ?? DEFAULT_TPS,
+  };
+}
 
 export function updateTickRate(): number {
   if (!Memory.debug) return DEFAULT_TPS;
-
   if (!Memory.debug.tickRate) {
-    Memory.debug.tickRate = {
-      lastGameTime: Game.time,
-      lastRealTime: Date.now(),
-      ticksPerSecond: Memory.debug.ticksPerSecond ?? DEFAULT_TPS,
-    };
+    Memory.debug.tickRate = initTickRate();
   }
 
-  const tickRate = Memory.debug.tickRate as {
-    lastGameTime: number;
-    lastRealTime: number;
-    ticksPerSecond: number;
-  };
-
+  const tickRate = Memory.debug.tickRate as TickRateMemory;
   const now = Date.now();
   const gameNow = Game.time;
   const deltaTicks = gameNow - tickRate.lastGameTime;
@@ -28,8 +33,7 @@ export function updateTickRate(): number {
 
   if (deltaTicks > 0 && deltaSeconds > 0) {
     const estimate = deltaTicks / deltaSeconds;
-    const alpha = 0.3; // smoothing factor
-    tickRate.ticksPerSecond = tickRate.ticksPerSecond * (1 - alpha) + estimate * alpha;
+    tickRate.ticksPerSecond = tickRate.ticksPerSecond * (1 - SMOOTHING) + estimate * SMOOTHING;
     Memory.debug.ticksPerSecond = tickRate.ticksPerSecond;
   }
 

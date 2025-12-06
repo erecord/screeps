@@ -46,12 +46,12 @@ export const refuelTowers: RoleComponent = context => {
   if (creep.memory.refueling && creep.memory.refuelTargetId) {
     const target = Game.getObjectById(creep.memory.refuelTargetId);
     if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-    transferEnergy(context, target);
-    return;
-  }
-  // Target filled or missing
-  creep.memory.refueling = false;
-  creep.memory.refuelTargetId = undefined;
+      transferEnergy(context, target);
+      return;
+    }
+    // Target filled or missing
+    creep.memory.refueling = false;
+    creep.memory.refuelTargetId = undefined;
   }
 
   // Assign a new refuel target if cooldown expired
@@ -81,11 +81,7 @@ export const deliverToSpawnAndExtensions: RoleComponent = context => {
   const { creep } = context;
   if (!shouldDeliver(creep) || creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
 
-  const deliveryThreshold =
-    creep.memory.energyDeliveryThreshold ??
-    (creep.room.energyCapacityAvailable > 0
-      ? Math.floor(creep.room.energyCapacityAvailable * 0.5)
-      : 0);
+  const deliveryThreshold = getDeliveryThreshold(creep);
   if (creep.room.energyAvailable >= deliveryThreshold && deliveryThreshold > 0) return;
 
   const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -113,6 +109,15 @@ function transferEnergy(
 
 function shouldDeliver(creep: Creep): boolean {
   return creep.memory.state === "deliver";
+}
+
+function getDeliveryThreshold(creep: Creep): number {
+  return (
+    creep.memory.energyDeliveryThreshold ??
+    (creep.room.energyCapacityAvailable > 0
+      ? Math.floor(creep.room.energyCapacityAvailable * 0.5)
+      : 0)
+  );
 }
 
 // Fallback: if a role did not pick a target, try to build first, then upgrade.

@@ -44,6 +44,7 @@ function recomputePlan(room: Room, spawn: StructureSpawn): RoadPlan {
 }
 
 function syncRoads(plan: RoadPlan, room: Room) {
+  let planDirty = false;
   let placed = 0;
   const positions: RoomPosition[] = [];
   plan.roundabout.forEach(pos => positions.push(storedToPos(pos)));
@@ -52,16 +53,47 @@ function syncRoads(plan: RoadPlan, room: Room) {
   });
 
   const unique = dedupePositions(positions);
+  const remainingKeys = new Set<string>();
 
   for (const pos of unique) {
     if (placed >= SITES_PER_TICK) break;
     if (!isBuildable(pos)) continue;
     const look = pos.lookFor(LOOK_STRUCTURES);
-    if (look.some(s => s.structureType === STRUCTURE_ROAD)) continue;
+    if (look.some(s => s.structureType === STRUCTURE_ROAD)) {
+      continue;
+    }
     const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-    if (sites.length) continue;
+    if (sites.length) {
+      remainingKeys.add(posKey(pos));
+      continue;
+    }
     const result = room.createConstructionSite(pos, STRUCTURE_ROAD);
     if (result === OK) placed++;
+    else remainingKeys.add(posKey(pos));
+  }
+
+  // Prune plan entries that are already built or unplaceable
+  const filteredRoundabout = plan.roundabout.filter(pos =>
+    remainingKeys.has(posKey(storedToPos(pos)))
+  );
+  if (filteredRoundabout.length !== plan.roundabout.length) {
+    planDirty = true;
+    plan.roundabout = filteredRoundabout;
+  }
+
+  const filteredRoutes: Record<string, typeof plan.routes[string]> = {};
+  Object.entries(plan.routes).forEach(([id, list]) => {
+    const remaining = list.filter(pos => remainingKeys.has(posKey(storedToPos(pos))));
+    if (remaining.length > 0) {
+      filteredRoutes[id] = remaining;
+    } else {
+      planDirty = true;
+    }
+  });
+  plan.routes = filteredRoutes;
+
+  if (planDirty) {
+    saveRoadPlan(room, plan);
   }
 }
 

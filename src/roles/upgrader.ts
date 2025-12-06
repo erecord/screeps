@@ -40,7 +40,7 @@ const upgraderAct = (context: RoleContext) => {
 
 const roleUpgrader: RoleStrategy = {
   act: upgraderAct,
-  components: [refuelTowersPeriodic(10), fallbackBuildOrUpgrade, drawPathToTarget],
+  components: [fallbackBuildOrUpgrade, drawPathToTarget],
 };
 
 export default roleUpgrader;
