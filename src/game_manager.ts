@@ -3,6 +3,7 @@ import { monitorSpawn } from "core/spawn_control";
 import { planStructures } from "spawn/structures";
 import { updateTickRate } from "utils/tick_rate";
 import { logRoomStats } from "utils/stats";
+import { runTowers } from "tower/tower_control";
 
 const gameManager = {
   run() {
@@ -17,6 +18,7 @@ const gameManager = {
     if (spawn) {
       monitorSpawn(spawn);
       planStructures(spawn);
+      runTowers(spawn.room);
       logStatsPeriodic(spawn.room);
     }
 
