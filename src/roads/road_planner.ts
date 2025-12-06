@@ -9,8 +9,9 @@ export function planRoads(room: Room) {
   if (!spawn) return;
 
   let plan = loadRoadPlan(room);
-  const stale = Game.time - plan.lastPlanned > REPLAN_INTERVAL;
-  if (stale) {
+  const needsReplan =
+    Game.time - plan.lastPlanned > REPLAN_INTERVAL || targetsChanged(room, plan, spawn);
+  if (needsReplan) {
     plan = recomputePlan(room, spawn);
     saveRoadPlan(room, plan);
   }
@@ -43,6 +44,27 @@ function recomputePlan(room: Room, spawn: StructureSpawn): RoadPlan {
   };
 }
 
+function targetsChanged(room: Room, plan: RoadPlan, spawn: StructureSpawn): boolean {
+  const targetIds = new Set<string>();
+  room.find(FIND_SOURCES).forEach(s => targetIds.add(s.id));
+  if (room.controller) targetIds.add(room.controller.id);
+  const plannedIds = new Set<string>(Object.keys(plan.routes));
+  if (targetIds.size !== plannedIds.size) return true;
+  for (const id of targetIds) {
+    if (!plannedIds.has(id)) return true;
+  }
+  if (!plan.roundabout.length) return true;
+  if (
+    plan.roundabout.length &&
+    !plan.roundabout.some(
+      p => p.x === spawn.pos.x && p.y === spawn.pos.y + 1 && p.roomName === spawn.pos.roomName
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function syncRoads(plan: RoadPlan, room: Room) {
   let planModifiedAndNeedsSave = false;
   let placed = 0;
@@ -67,7 +89,6 @@ function syncRoads(plan: RoadPlan, room: Room) {
       remainingKeys.add(posKey(pos));
       continue;
     }
-    // If occupied by a non-road structure, drop this planned road.
     if (look.some(s => s.structureType !== STRUCTURE_ROAD)) {
       planModifiedAndNeedsSave = true;
       continue;
@@ -77,7 +98,6 @@ function syncRoads(plan: RoadPlan, room: Room) {
     else remainingKeys.add(posKey(pos));
   }
 
-  // Prune plan entries that are already built or unplaceable
   const filteredRoundabout = plan.roundabout.filter(pos =>
     remainingKeys.has(posKey(storedToPos(pos)))
   );

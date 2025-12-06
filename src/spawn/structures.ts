@@ -1,6 +1,6 @@
 import { planInitialStructures } from "policy/build_planner";
 import logger from "utils/logger";
-import { planRoads } from "roads/planner";
+import { planRoads } from "roads/road_planner";
 import { buildRoomSnapshot } from "planner/planner_snapshot";
 import { DEFAULT_PHASES, selectPhase } from "planner/planner_phases";
 import { placePhaseStructures } from "planner/planner_placement";

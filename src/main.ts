@@ -32,6 +32,7 @@ declare global {
         >;
       }
     >;
+    structurePlanFailures?: Record<string, { failures: Record<string, number> }>;
     debug: {
       drawPaths: boolean;
       ticksPerSecond?: number;

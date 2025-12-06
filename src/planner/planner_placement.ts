@@ -1,13 +1,22 @@
 import { RoomSnapshot } from "planner/planner_snapshot";
 import { PhaseConfig } from "planner/planner_phases";
 import { applyValidators, PlacementCandidate } from "planner/planner_validators";
-import { PHASE_SITES_PER_TICK } from "planner/planner_constants";
+import {
+  PHASE_SITES_PER_TICK,
+  PHASE_SITES_PER_TICK_MAX,
+  PLAN_FAILURE_RETRIES,
+} from "planner/planner_constants";
 import {
   loadStructurePlan,
   posToStored,
   saveStructurePlan,
   storedToPos,
   StructurePlan,
+} from "planner/planner_plan_state";
+import {
+  cleanupEmptyPlan,
+  loadFailureTracker,
+  saveFailureTracker,
 } from "planner/planner_plan_state";
 import { loadRoadPlan, storedToPos as roadStoredToPos } from "roads/state";
 import { posKey } from "roads/paths";
@@ -20,11 +29,16 @@ export function placePhaseStructures(
   phase: PhaseConfig
 ) {
   const plan = loadStructurePlan(spawn.room);
+  const failures = loadFailureTracker(spawn.room);
+  const siteBudget = Math.min(
+    PHASE_SITES_PER_TICK_MAX,
+    PHASE_SITES_PER_TICK + Math.max(0, (spawn.room.controller?.level ?? 1) - 2)
+  );
   let planChanged = false;
   let placed = 0;
 
   for (const [type, desiredCount] of Object.entries(phase.structureTargets)) {
-    if (placed >= PHASE_SITES_PER_TICK) break;
+    if (placed >= siteBudget) break;
     const structureType = type as StructureConstant;
     const controllerLevel = spawn.room.controller?.level ?? 0;
     const allowed =
@@ -66,7 +80,8 @@ export function placePhaseStructures(
       phase.validators,
       type as BuildableStructureConstant,
       plannedList,
-      Math.min(PHASE_SITES_PER_TICK - placed, targetCount)
+      Math.min(siteBudget - placed, targetCount),
+      failures
     );
     placed += result.placed;
     if (result.planChanged) planChanged = true;
@@ -75,6 +90,8 @@ export function placePhaseStructures(
   if (planChanged) {
     saveStructurePlan(spawn.room, plan);
   }
+  saveFailureTracker(spawn.room, failures);
+  cleanupEmptyPlan(spawn.room, plan);
 }
 
 function ensurePlanList(plan: StructurePlan, type: BuildableStructureConstant) {
@@ -114,6 +131,7 @@ function planNewPositions(
   const controllerPos = spawn.room.controller?.pos;
   const sources = snapshot.sources;
   const candidates: Array<{ pos: RoomPosition; score: number }> = [];
+  const MAX_CANDIDATES = 200;
 
   // TODO: replace ring search with layout-aware placement (POI-aligned roads/blocks).
   const radiusMax = 8;
@@ -121,6 +139,7 @@ function planNewPositions(
     for (let dx = -r; dx <= r && added < missing; dx++) {
       for (let dy = -r; dy <= r && added < missing; dy++) {
         if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+        if (candidates.length >= MAX_CANDIDATES) break;
         const pos = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, spawn.pos.roomName);
         const candidate: PlacementCandidate = { pos, structureType };
         const key = posKey(pos);
@@ -160,7 +179,8 @@ function placeFromPlan(
   validators: PhaseConfig["validators"],
   structureType: BuildableStructureConstant,
   plannedList: ReturnType<typeof ensurePlanList>,
-  budget: number
+  budget: number,
+  failures: ReturnType<typeof loadFailureTracker>
 ): { placed: number; planChanged: boolean } {
   let placed = 0;
   let planChanged = false;
@@ -178,21 +198,31 @@ function placeFromPlan(
 
     const structures = pos.lookFor(LOOK_STRUCTURES);
     if (structures.some(s => s.structureType === structureType)) {
+      clearFailure(failures, posKey(pos));
       planChanged = true; // already built
       continue;
     }
     if (structures.length) {
-      planChanged = true; // blocked by other structure (including roads)
+      if (shouldDrop(failures, posKey(pos))) {
+        planChanged = true; // blocked long-term, prune
+      } else {
+        remaining.push(stored);
+      }
       continue;
     }
 
     const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
     if (sites.some(site => site.structureType === structureType)) {
+      clearFailure(failures, posKey(pos));
       planChanged = true; // already queued as a site
       continue;
     }
     if (sites.length) {
-      planChanged = true; // blocked by other site type
+      if (shouldDrop(failures, posKey(pos))) {
+        planChanged = true; // blocked long-term, prune
+      } else {
+        remaining.push(stored);
+      }
       continue;
     }
 
@@ -203,11 +233,16 @@ function placeFromPlan(
 
     const result = spawn.room.createConstructionSite(pos, structureType);
     if (result === OK) {
+      clearFailure(failures, posKey(pos));
       placed++;
       planChanged = true;
     } else {
-      // If we cannot place here (e.g., terrain or blocking), drop the entry.
-      planChanged = true;
+      // If we cannot place here (e.g., terrain or blocking), drop only after a few retries.
+      if (shouldDrop(failures, posKey(pos))) {
+        planChanged = true;
+      } else {
+        remaining.push(stored);
+      }
     }
   }
 
@@ -215,6 +250,18 @@ function placeFromPlan(
   plannedList.push(...remaining);
 
   return { placed, planChanged };
+}
+
+function shouldDrop(failures: ReturnType<typeof loadFailureTracker>, key: string): boolean {
+  const count = failures.failures[key] ?? 0;
+  failures.failures[key] = count + 1;
+  return failures.failures[key] > PLAN_FAILURE_RETRIES;
+}
+
+function clearFailure(failures: ReturnType<typeof loadFailureTracker>, key: string) {
+  if (failures.failures[key]) {
+    delete failures.failures[key];
+  }
 }
 
 function scoreCandidate(

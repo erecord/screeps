@@ -8,6 +8,7 @@ import { runWithComponents } from "roles/components";
 import { isDefenseMode } from "defense/defense_manager";
 import { buildRoomSnapshot } from "planner/planner_snapshot";
 import { DEFAULT_PHASES, selectPhase } from "planner/planner_phases";
+import { bodyPlanForRole } from "policy/body_policy";
 import logger from "utils/logger";
 
 function computeRoleCounts(spawn: StructureSpawn): Partial<Record<RoleId, number>> {
@@ -31,7 +32,7 @@ function ensureMinimumCreeps(
   if (!Memory.spawns[spawn.name]) Memory.spawns[spawn.name] = {};
   const spawnMem = Memory.spawns[spawn.name] as any;
 
-  const priority = getRolePriority(spawn.room);
+  const priority = getRolePriority(spawn);
 
   for (const role of priority) {
     const desired = desiredCounts[role] ?? 0;
@@ -45,12 +46,20 @@ function ensureMinimumCreeps(
   }
 }
 
-function getRolePriority(room: Room): RoleId[] {
-  if (isDefenseMode(room)) {
-    // Defenders first during active defense, then keep economy flowing
-    return [ROLES.DEFENDER, ROLES.HARVESTER, ROLES.BUILDER, ROLES.UPGRADER];
-  }
-  return ROLE_PRIORITY;
+function getRolePriority(spawn: StructureSpawn): RoleId[] {
+  if (!isDefenseMode(spawn.room)) return ROLE_PRIORITY;
+
+  // In defense, prefer roles that can actually fight (ATTACK/TOUGH) without starving economy.
+  const combatCapable = ROLE_PRIORITY.filter(role => roleHasCombatParts(spawn, role));
+  const nonCombat = ROLE_PRIORITY.filter(role => !combatCapable.includes(role));
+
+  // Defenders first, then any other combat-capable variants, then the rest.
+  return [ROLES.DEFENDER, ...combatCapable.filter(r => r !== ROLES.DEFENDER), ...nonCombat];
+}
+
+function roleHasCombatParts(spawn: StructureSpawn, role: RoleId): boolean {
+  const plan = bodyPlanForRole(spawn, role);
+  return plan.target.includes(ATTACK) || plan.target.includes(TOUGH);
 }
 
 function runRole(creep: Creep) {
