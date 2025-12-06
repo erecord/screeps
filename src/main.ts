@@ -15,6 +15,14 @@ declare global {
     uuid: number;
     log: any;
     spawns: { [name: string]: SpawnMemory };
+    roads?: Record<
+      string,
+      {
+        roundabout: Array<{ x: number; y: number; roomName: string }>;
+        routes: Record<string, Array<{ x: number; y: number; roomName: string }>>;
+        lastPlanned: number;
+      }
+    >;
     debug: {
       drawPaths: boolean;
       ticksPerSecond?: number;

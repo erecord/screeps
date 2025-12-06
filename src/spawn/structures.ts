@@ -1,5 +1,6 @@
 import { planInitialStructures } from "policy/build_planner";
 import logger from "utils/logger";
+import { planRoads } from "roads/planner";
 
 export function planStructures(spawn: StructureSpawn) {
   // Place planned structures (currently extensions) while leaving the spawn loop clean.
@@ -17,4 +18,6 @@ export function planStructures(spawn: StructureSpawn) {
       );
     }
   });
+
+  planRoads(spawn.room);
 }
