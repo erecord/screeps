@@ -1,4 +1,11 @@
-import { drawPathToTarget, fallbackBuildOrUpgrade, refuelTowersPeriodic, runWithComponents, RoleContext } from "roles/components";
+import {
+  deliverToSpawnAndExtensions,
+  drawPathToTarget,
+  fallbackBuildOrUpgrade,
+  refuelTowersPeriodic,
+  runWithComponents,
+  RoleContext,
+} from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
 import { updateRoleState } from "roles/role_state";
@@ -25,7 +32,12 @@ const builderAct = (context: RoleContext) => {
 
 const roleBuilder: RoleStrategy = {
   act: builderAct,
-  components: [refuelTowersPeriodic(10), fallbackBuildOrUpgrade, drawPathToTarget],
+  components: [
+    refuelTowersPeriodic(10),
+    deliverToSpawnAndExtensions,
+    fallbackBuildOrUpgrade,
+    drawPathToTarget,
+  ],
 };
 
 export default roleBuilder;

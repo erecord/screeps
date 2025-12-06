@@ -122,7 +122,8 @@ export function trySpawnCreep(
   spawnMem.waitingSince = spawnMem.waitingSince ?? Game.time;
   spawnMem.waitingForBody = plan.target;
   const waited = Game.time - (spawnMem.waitingSince as number);
-  const fallbackWait = 50;
+  const ratio = targetCost / Math.max(minCost, 1);
+  const fallbackWait = Math.min(200, Math.max(50, Math.floor(ratio * 25)));
 
   if (energyAvailable >= minCost && waited >= fallbackWait) {
     return spawnFallback(spawn, role, spawnMem, plan, waited);

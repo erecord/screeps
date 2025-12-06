@@ -1,4 +1,10 @@
-import { drawPathToTarget, fallbackBuildOrUpgrade, refuelTowers, runWithComponents, RoleContext } from "roles/components";
+import {
+  deliverToSpawnAndExtensions,
+  drawPathToTarget,
+  fallbackBuildOrUpgrade,
+  refuelTowers,
+  RoleContext,
+} from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
 import { updateRoleState } from "roles/role_state";
@@ -26,7 +32,12 @@ const harvesterAct = (context: RoleContext) => {
 
 const roleHarvester: RoleStrategy = {
   act: harvesterAct,
-  components: [refuelTowers, fallbackBuildOrUpgrade, drawPathToTarget],
+  components: [
+    refuelTowers,
+    deliverToSpawnAndExtensions,
+    fallbackBuildOrUpgrade,
+    drawPathToTarget,
+  ],
 };
 
 export default roleHarvester;

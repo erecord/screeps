@@ -19,6 +19,13 @@ export function runWithComponents(
   const context: RoleContext = { creep };
   act(context);
   components.forEach(component => component(context));
+  if (Memory.debug?.showNameTags) {
+    creep.room.visual.text(creep.name, creep.pos.x, creep.pos.y + 1, {
+      color: "white",
+      font: 0.4,
+      opacity: 0.8,
+    });
+  }
 }
 
 export const drawPathToTarget: RoleComponent = ({ creep, target }) => {
@@ -30,7 +37,7 @@ export const drawPathToTarget: RoleComponent = ({ creep, target }) => {
 
 export const refuelTowers: RoleComponent = context => {
   const { creep } = context;
-  if (creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
+  if (!shouldDeliver(creep) || creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
     creep.memory.refueling = false;
     creep.memory.refuelTargetId = undefined;
     return;
@@ -39,16 +46,12 @@ export const refuelTowers: RoleComponent = context => {
   if (creep.memory.refueling && creep.memory.refuelTargetId) {
     const target = Game.getObjectById(creep.memory.refuelTargetId);
     if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-      context.target = target;
-      const result = creep.transfer(target, RESOURCE_ENERGY);
-      if (result === ERR_NOT_IN_RANGE) {
-        creep.moveTo(target);
-      }
-      return;
-    }
-    // Target filled or missing
-    creep.memory.refueling = false;
-    creep.memory.refuelTargetId = undefined;
+    transferEnergy(context, target);
+    return;
+  }
+  // Target filled or missing
+  creep.memory.refueling = false;
+  creep.memory.refuelTargetId = undefined;
   }
 
   // Assign a new refuel target if cooldown expired
@@ -63,11 +66,7 @@ export const refuelTowers: RoleComponent = context => {
     creep.memory.refueling = true;
     creep.memory.refuelTargetId = target.id;
     creep.memory.refuelCooldown = Game.time + 50; // don't retarget too often
-    context.target = target;
-    const result = creep.transfer(target, RESOURCE_ENERGY);
-    if (result === ERR_NOT_IN_RANGE) {
-      creep.moveTo(target);
-    }
+    transferEnergy(context, target);
   }
 };
 
@@ -77,6 +76,37 @@ export const refuelTowersPeriodic = (interval: number): RoleComponent => {
     refuelTowers(context);
   };
 };
+
+export const deliverToSpawnAndExtensions: RoleComponent = context => {
+  const { creep } = context;
+  if (!shouldDeliver(creep) || creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
+
+  const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: structure =>
+      (structure.structureType === STRUCTURE_SPAWN ||
+        structure.structureType === STRUCTURE_EXTENSION) &&
+      structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+  }) as StructureSpawn | StructureExtension | null;
+
+  if (!target) return;
+
+  transferEnergy(context, target);
+};
+
+function transferEnergy(
+  context: RoleContext,
+  target: StructureSpawn | StructureExtension | StructureTower
+) {
+  context.target = target;
+  const result = context.creep.transfer(target, RESOURCE_ENERGY);
+  if (result === ERR_NOT_IN_RANGE) {
+    context.creep.moveTo(target);
+  }
+}
+
+function shouldDeliver(creep: Creep): boolean {
+  return creep.memory.state === "deliver";
+}
 
 // Fallback: if a role did not pick a target, try to build first, then upgrade.
 export const fallbackBuildOrUpgrade: RoleComponent = context => {
