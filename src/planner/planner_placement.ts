@@ -30,10 +30,14 @@ export function placePhaseStructures(
 ) {
   const plan = loadStructurePlan(spawn.room);
   const failures = loadFailureTracker(spawn.room);
-  const siteBudget = Math.min(
-    PHASE_SITES_PER_TICK_MAX,
-    PHASE_SITES_PER_TICK + Math.max(0, (spawn.room.controller?.level ?? 1) - 2)
-  );
+  const controllerLevel = spawn.room.controller?.level ?? 1;
+  const siteBudget =
+    controllerLevel < 3
+      ? 1
+      : Math.min(
+          PHASE_SITES_PER_TICK_MAX,
+          PHASE_SITES_PER_TICK + Math.max(0, controllerLevel - 2)
+        );
   let planChanged = false;
   let placed = 0;
 

@@ -6,6 +6,14 @@ import { DEFAULT_PHASES, selectPhase } from "planner/planner_phases";
 import { placePhaseStructures } from "planner/planner_placement";
 
 export function planStructures(spawn: StructureSpawn) {
+  const controllerLevel = spawn.room.controller?.level ?? 0;
+  const bootstrap = controllerLevel < 3;
+  const BOOTSTRAP_INTERVAL = 20;
+  const shouldRunHeavy =
+    !bootstrap || Game.time % BOOTSTRAP_INTERVAL === 0; // throttle heavy planning in bootstrap
+  const shouldPlanRoads =
+    !bootstrap || Game.time % BOOTSTRAP_INTERVAL === 0; // road sync also throttled heavily early
+
   // Place planned structures (currently extensions) while leaving the spawn loop clean.
   const intents = planInitialStructures(spawn);
   intents.forEach(intent => {
@@ -22,10 +30,14 @@ export function planStructures(spawn: StructureSpawn) {
     }
   });
 
-  planRoads(spawn.room);
+  if (shouldPlanRoads) {
+    planRoads(spawn.room);
+  }
 
-  const snapshot = buildRoomSnapshot(spawn.room);
-  const phase = selectPhase(DEFAULT_PHASES, snapshot);
-  // Use phase structure targets with validator chain; roads already prioritised separately.
-  placePhaseStructures(spawn, snapshot, phase);
+  if (shouldRunHeavy) {
+    const snapshot = buildRoomSnapshot(spawn.room);
+    const phase = selectPhase(DEFAULT_PHASES, snapshot);
+    // Use phase structure targets with validator chain; roads already prioritised separately.
+    placePhaseStructures(spawn, snapshot, phase);
+  }
 }

@@ -55,6 +55,8 @@ export const moatAndRoadClearanceValidator: PlacementValidator = (candidate, sna
 };
 
 export const pathLengthValidator: PlacementValidator = (candidate, snapshot) => {
+  // Skip pathfinding-heavy validation in early bootstrap to save CPU.
+  if (snapshot.controllerLevel < 3) return "accept";
   const spawn = snapshot.spawns[0];
   if (!spawn) return "accept";
   const result = PathFinder.search(spawn.pos, { pos: candidate.pos, range: 1 });
