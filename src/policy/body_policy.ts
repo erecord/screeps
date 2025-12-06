@@ -6,7 +6,7 @@ export function bodyCost(body: BodyPartConstant[]): number {
   return body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
 }
 
-export const EMERGENCY_BODY: BodyPartConstant[] = [WORK, MOVE]; // 150
+export const EMERGENCY_BODY: BodyPartConstant[] = [WORK, CARRY, MOVE]; // 200; can harvest and deliver
 
 const TIERS: BodyTiers = {
   [ROLES.HARVESTER]: [
