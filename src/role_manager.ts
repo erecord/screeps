@@ -1,6 +1,6 @@
 import { ROLE_PRIORITY } from "core/config";
 import { ROLES, RoleId } from "roles/constants";
-import { desiredRoleCountsForSpawn } from "policy/spawn_policy";
+import { desiredRolesWithContext } from "policy/spawn_policy";
 import { trySpawnCreep } from "spawn/boot";
 import { roleRegistry } from "roles/role_registry";
 import { RoleStrategy } from "roles/types";
@@ -56,7 +56,7 @@ const roleManager = {
     if (!spawn) return;
 
     const roleCounts = computeRoleCounts(spawn);
-    const desiredCounts = desiredRoleCountsForSpawn(spawn);
+    const desiredCounts = desiredRolesWithContext(spawn);
 
     ensureMinimumCreeps(spawn, roleCounts, desiredCounts);
     _.forEach(Game.creeps, runRole);
