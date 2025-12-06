@@ -1,7 +1,7 @@
-import { drawPathToTarget, fallbackBuildOrUpgrade, runWithComponents, RoleContext } from "roles/components";
+import { drawPathToTarget, fallbackBuildOrUpgrade, refuelTowers, runWithComponents, RoleContext } from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
-import { updateRoleState } from "roles/state";
+import { updateRoleState } from "roles/role_state";
 
 const harvesterAct = (context: RoleContext) => {
   const { creep } = context;
@@ -20,27 +20,13 @@ const harvesterAct = (context: RoleContext) => {
     return;
   }
 
-  // When full: deposit to spawn if possible; otherwise let components handle fallback
-  // Deliver to closest spawn/extension with free capacity
-  const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-    filter: structure =>
-      (structure.structureType === STRUCTURE_SPAWN ||
-        structure.structureType === STRUCTURE_EXTENSION) &&
-      structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-  }) as StructureExtension | StructureSpawn | null;
-
-  if (target) {
-    context.target = target;
-    const transferResult = creep.transfer(target, RESOURCE_ENERGY);
-    if (transferResult === ERR_NOT_IN_RANGE) {
-      creep.moveTo(target);
-    }
-  }
+  // When full (state === DELIVER): deposit to structures if carrying energy
+  if (creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
 };
 
 const roleHarvester: RoleStrategy = {
   act: harvesterAct,
-  components: [fallbackBuildOrUpgrade, drawPathToTarget],
+  components: [refuelTowers, fallbackBuildOrUpgrade, drawPathToTarget],
 };
 
 export default roleHarvester;

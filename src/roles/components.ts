@@ -28,6 +28,56 @@ export const drawPathToTarget: RoleComponent = ({ creep, target }) => {
   creep.room.visual.line(creep.pos, targetPos, { color: "yellow", opacity: 0.3 });
 };
 
+export const refuelTowers: RoleComponent = context => {
+  const { creep } = context;
+  if (creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
+    creep.memory.refueling = false;
+    creep.memory.refuelTargetId = undefined;
+    return;
+  }
+
+  if (creep.memory.refueling && creep.memory.refuelTargetId) {
+    const target = Game.getObjectById(creep.memory.refuelTargetId);
+    if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+      context.target = target;
+      const result = creep.transfer(target, RESOURCE_ENERGY);
+      if (result === ERR_NOT_IN_RANGE) {
+        creep.moveTo(target);
+      }
+      return;
+    }
+    // Target filled or missing
+    creep.memory.refueling = false;
+    creep.memory.refuelTargetId = undefined;
+  }
+
+  // Assign a new refuel target if cooldown expired
+  if (creep.memory.refuelCooldown && creep.memory.refuelCooldown > Game.time) return;
+  const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: structure =>
+      structure.structureType === STRUCTURE_TOWER &&
+      structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+  }) as StructureTower | null;
+
+  if (target) {
+    creep.memory.refueling = true;
+    creep.memory.refuelTargetId = target.id;
+    creep.memory.refuelCooldown = Game.time + 50; // don't retarget too often
+    context.target = target;
+    const result = creep.transfer(target, RESOURCE_ENERGY);
+    if (result === ERR_NOT_IN_RANGE) {
+      creep.moveTo(target);
+    }
+  }
+};
+
+export const refuelTowersPeriodic = (interval: number): RoleComponent => {
+  return context => {
+    if (Game.time % interval !== 0) return;
+    refuelTowers(context);
+  };
+};
+
 // Fallback: if a role did not pick a target, try to build first, then upgrade.
 export const fallbackBuildOrUpgrade: RoleComponent = context => {
   const { creep, target } = context;
