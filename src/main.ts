@@ -24,6 +24,7 @@ declare global {
         ticksPerSecond: number;
       };
       showNameTags?: boolean;
+      lastStatsLog?: number;
     };
   }
 
