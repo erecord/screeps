@@ -9,6 +9,7 @@ import {
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
 import { updateRoleState } from "roles/role_state";
+import { getOrAssignSource } from "roles/source_target";
 
 const builderAct = (context: RoleContext) => {
   const { creep } = context;
@@ -16,7 +17,7 @@ const builderAct = (context: RoleContext) => {
 
   if (state === ROLE_STATE.GATHER) {
     // Harvest until full
-    const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+    const source = getOrAssignSource(creep);
     if (source) {
       context.target = source;
       const harvestResult = creep.harvest(source);
@@ -33,8 +34,7 @@ const builderAct = (context: RoleContext) => {
 const roleBuilder: RoleStrategy = {
   act: builderAct,
   components: [
-    refuelTowersPeriodic(10),
-    deliverToSpawnAndExtensions,
+    refuelTowersPeriodic(20),
     fallbackBuildOrUpgrade,
     drawPathToTarget,
   ],

@@ -3,19 +3,20 @@ import {
   drawPathToTarget,
   fallbackBuildOrUpgrade,
   refuelTowers,
+  runWithComponents,
   RoleContext,
 } from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
 import { updateRoleState } from "roles/role_state";
+import { getOrAssignSource } from "roles/source_target";
 
 const harvesterAct = (context: RoleContext) => {
   const { creep } = context;
   const state = updateRoleState(creep);
 
   if (state === ROLE_STATE.GATHER) {
-    // Harvest until energy storage is full
-    const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+    const source = getOrAssignSource(creep);
     if (source) {
       context.target = source;
       const harvestResult = creep.harvest(source);

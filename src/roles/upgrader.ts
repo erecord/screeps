@@ -1,7 +1,14 @@
-import { drawPathToTarget, fallbackBuildOrUpgrade, refuelTowersPeriodic, runWithComponents, RoleContext } from "roles/components";
+import {
+  drawPathToTarget,
+  fallbackBuildOrUpgrade,
+  refuelTowersPeriodic,
+  runWithComponents,
+  RoleContext,
+} from "roles/components";
 import { ROLE_STATE } from "roles/constants";
 import { RoleStrategy } from "roles/types";
 import { updateRoleState } from "roles/role_state";
+import { getOrAssignSource } from "roles/source_target";
 
 const upgraderAct = (context: RoleContext) => {
   const { creep } = context;
@@ -9,7 +16,7 @@ const upgraderAct = (context: RoleContext) => {
 
   if (state === ROLE_STATE.GATHER) {
     // Harvest until full
-    const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+    const source = getOrAssignSource(creep);
     if (source) {
       context.target = source;
       const harvestResult = creep.harvest(source);
@@ -33,7 +40,7 @@ const upgraderAct = (context: RoleContext) => {
 
 const roleUpgrader: RoleStrategy = {
   act: upgraderAct,
-  components: [refuelTowersPeriodic(5), fallbackBuildOrUpgrade, drawPathToTarget],
+  components: [refuelTowersPeriodic(10), fallbackBuildOrUpgrade, drawPathToTarget],
 };
 
 export default roleUpgrader;

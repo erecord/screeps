@@ -65,7 +65,7 @@ export const refuelTowers: RoleComponent = context => {
   if (target) {
     creep.memory.refueling = true;
     creep.memory.refuelTargetId = target.id;
-    creep.memory.refuelCooldown = Game.time + 50; // don't retarget too often
+    creep.memory.refuelCooldown = Game.time + 50; // don't re-target too often
     transferEnergy(context, target);
   }
 };
@@ -80,6 +80,13 @@ export const refuelTowersPeriodic = (interval: number): RoleComponent => {
 export const deliverToSpawnAndExtensions: RoleComponent = context => {
   const { creep } = context;
   if (!shouldDeliver(creep) || creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
+
+  const deliveryThreshold =
+    creep.memory.energyDeliveryThreshold ??
+    (creep.room.energyCapacityAvailable > 0
+      ? Math.floor(creep.room.energyCapacityAvailable * 0.5)
+      : 0);
+  if (creep.room.energyAvailable >= deliveryThreshold && deliveryThreshold > 0) return;
 
   const target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
